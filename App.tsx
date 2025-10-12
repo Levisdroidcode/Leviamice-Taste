@@ -12,6 +12,7 @@ import { Welcome } from './components/Welcome';
 import { SearchHistory } from './components/SearchHistory';
 import { FilterTabs } from './components/FilterTabs';
 import { Profile } from './components/Profile';
+import { CookingGame } from './components/CookingGame';
 
 type View = 'search' | 'profile';
 
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'saved'>('all');
   const [currentView, setCurrentView] = useState<View>('search');
   const [viewBeforeDetail, setViewBeforeDetail] = useState<View>('search');
+  const [isGameActive, setIsGameActive] = useState<boolean>(false);
 
   useEffect(() => {
     try {
@@ -62,6 +64,7 @@ const App: React.FC = () => {
     setRecipes([]);
     setSelectedRecipe(null);
     setActiveFilter('all');
+    setIsGameActive(false);
 
     if (!searchHistory.includes(query)) {
         setSearchHistory(prev => [query, ...prev].slice(0, 5)); // Keep last 5 searches
@@ -100,7 +103,6 @@ const App: React.FC = () => {
         return newSaved;
     });
 
-    // Also update the selected recipe if it's the one being toggled
     if (selectedRecipe && selectedRecipe.recipeName === recipeToToggle.recipeName) {
         setSelectedRecipe(prev => prev ? ({ ...prev, isSaved: !prev.isSaved }) : null);
     }
@@ -110,10 +112,12 @@ const App: React.FC = () => {
   const handleSelectRecipe = (recipe: Recipe) => {
     setViewBeforeDetail(currentView);
     setSelectedRecipe({ ...recipe, isSaved: savedRecipes.has(recipe.recipeName) });
+    setIsGameActive(false);
   };
 
   const handleBack = () => {
     setSelectedRecipe(null);
+    setIsGameActive(false);
     setCurrentView(viewBeforeDetail);
   };
 
@@ -123,8 +127,17 @@ const App: React.FC = () => {
   }, [recipes, savedRecipes, activeFilter]);
   
   const renderContent = () => {
+    if (isGameActive && selectedRecipe) {
+        return <CookingGame recipe={selectedRecipe} onEndGame={() => setIsGameActive(false)} />;
+    }
+
     if (selectedRecipe) {
-        return <RecipeDetail recipe={selectedRecipe} onBack={handleBack} onToggleSave={() => toggleSaveRecipe(selectedRecipe)} />;
+        return <RecipeDetail 
+                    recipe={selectedRecipe} 
+                    onBack={handleBack} 
+                    onToggleSave={() => toggleSaveRecipe(selectedRecipe)} 
+                    onStartGame={() => setIsGameActive(true)}
+                />;
     }
 
     if (currentView === 'profile') {
@@ -182,7 +195,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen font-sans text-gray-800">
-      <Header onShowProfile={() => { setSelectedRecipe(null); setCurrentView('profile'); }} />
+      <Header onShowProfile={() => { setSelectedRecipe(null); setIsGameActive(false); setCurrentView('profile'); }} />
       <main className="container mx-auto p-4 md:p-8">
         {renderContent()}
       </main>

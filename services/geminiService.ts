@@ -34,6 +34,41 @@ const generateRecipeImage = async (recipeName: string, description: string): Pro
     }
 };
 
+export const parseIngredientsFromInstruction = async (instruction: string, allIngredients: string[]): Promise<string[]> => {
+    try {
+        const prompt = `
+        You are an expert at parsing cooking instructions.
+        Here is the full list of ingredients for a recipe: ${JSON.stringify(allIngredients)}.
+        Here is a single instruction from that recipe: "${instruction}".
+
+        Your task is to identify which ingredients from the full list are mentioned or clearly implied in this single instruction.
+        Return your answer as a JSON array of strings. The strings must be exact matches from the provided ingredient list.
+        For example, if the instruction is "mix the flour and sugar" and the list contains "1 cup of flour" and "1/2 cup of sugar", you should return ["1 cup of flour", "1/2 cup of sugar"].
+        If no ingredients are mentioned, return an empty array.
+        `;
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              }
+            },
+        });
+
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+
+    } catch (error) {
+        console.error("Error parsing ingredients from instruction:", error);
+        // Fallback to empty array in case of error
+        return [];
+    }
+};
+
 
 const recipeSchema = {
     type: Type.ARRAY,
