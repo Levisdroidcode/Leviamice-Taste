@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Trophy, AlertCircle, Timer, ChevronRight } from 'lucide-react';
 import type { Recipe } from '../types';
 import { parseIngredientsFromInstruction } from '../services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -12,17 +14,28 @@ const DISTRACTOR_INGREDIENTS = [
     '1 tbsp olive oil', '1 onion, chopped', '2 cloves garlic, minced', '1 tsp salt', '1/2 tsp black pepper', '1 lemon, juiced', '1/4 cup parsley, chopped', '1 lb potatoes', '3 carrots, sliced'
 ];
 
-const GameModal: React.FC<{ title: string; message: string; onPlayAgain: () => void; onExit: () => void; }> = ({ title, message, onPlayAgain, onExit }) => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in-up">
-        <div className="bg-white rounded-lg shadow-xl p-8 text-center max-w-sm">
+const GameModal: React.FC<{ title: string; message: string; icon: React.ReactNode; onPlayAgain: () => void; onExit: () => void; }> = ({ title, message, icon, onPlayAgain, onExit }) => (
+    <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+    >
+        <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-lg shadow-xl p-8 text-center max-w-sm"
+        >
+            <div className="flex justify-center mb-4">
+                {icon}
+            </div>
             <h2 className="text-3xl font-bold text-orange-500 mb-4">{title}</h2>
             <p className="text-gray-700 mb-6">{message}</p>
             <div className="flex justify-center gap-4">
                 <button onClick={onPlayAgain} className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors">Play Again</button>
                 <button onClick={onExit} className="px-6 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors">Exit</button>
             </div>
-        </div>
-    </div>
+        </motion.div>
+    </motion.div>
 );
 
 // Helper to parse time strings like "15 minutes" into a number of minutes
@@ -137,21 +150,24 @@ export const CookingGame: React.FC<CookingGameProps> = ({ recipe, onEndGame }) =
     const progressPercentage = (currentStepIndex / recipe.instructions.length) * 100;
 
     if (gameState === 'won') {
-        return <GameModal title="Congratulations!" message="You completed the recipe perfectly! You're a true chef." onPlayAgain={resetGame} onExit={() => onEndGame(true)} />;
+        return <GameModal title="Congratulations!" message="You completed the recipe perfectly! You're a true chef." icon={<Trophy className="h-16 w-16 text-yellow-500" />} onPlayAgain={resetGame} onExit={() => onEndGame(true)} />;
     }
     if (gameState === 'lost') {
-        return <GameModal title="Time's Up!" message="You ran out of time. Better luck next time!" onPlayAgain={resetGame} onExit={() => onEndGame(false)} />;
+        return <GameModal title="Time's Up!" message="You ran out of time. Better luck next time!" icon={<AlertCircle className="h-16 w-16 text-red-500" />} onPlayAgain={resetGame} onExit={() => onEndGame(false)} />;
     }
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 animate-fade-in-up">
+        <div className="bg-white rounded-lg shadow-xl p-6 md:p-8">
             <div className="flex justify-between items-center border-b-2 pb-4 mb-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">Cooking Challenge!</h2>
                     <p className="text-gray-600">{recipe.recipeName}</p>
                 </div>
                 <div className="text-center">
-                    <div className="text-sm font-semibold text-gray-500">TIME LEFT</div>
+                    <div className="text-sm font-semibold text-gray-500 flex items-center justify-center">
+                        <Timer className="h-4 w-4 mr-1" />
+                        TIME LEFT
+                    </div>
                     <div className="text-3xl font-bold text-orange-500">{`${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`}</div>
                 </div>
             </div>
@@ -215,9 +231,10 @@ export const CookingGame: React.FC<CookingGameProps> = ({ recipe, onEndGame }) =
                 <button 
                     onClick={() => setCurrentStepIndex(i => i + 1)}
                     disabled={isLoadingStep || (requiredIngredients.length > 0 && !allRequiredSelected)}
-                    className="w-full lg:w-auto px-10 py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="w-full lg:w-auto px-10 py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center mx-auto"
                 >
                     {currentStepIndex === recipe.instructions.length - 1 ? 'Finish Recipe!' : 'Next Step'}
+                    <ChevronRight className="ml-2 h-5 w-5" />
                 </button>
             </div>
         </div>

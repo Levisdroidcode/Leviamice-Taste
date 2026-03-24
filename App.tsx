@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { SearchBar } from './components/SearchBar';
@@ -115,43 +116,79 @@ const App: React.FC = () => {
     setIsGameActive(false);
   };
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     setSelectedRecipe(null);
     setIsGameActive(false);
     setCurrentView(viewBeforeDetail);
-  };
+  }, [viewBeforeDetail]);
+
+  const handleGoHome = useCallback(() => {
+    setSelectedRecipe(null);
+    setIsGameActive(false);
+    setCurrentView('search');
+    setHasSearched(false);
+    setRecipes([]);
+    setError(null);
+  }, []);
+
+  const handleGlobalBack = useCallback(() => {
+    if (isGameActive) {
+      setIsGameActive(false);
+    } else if (selectedRecipe) {
+      handleBack();
+    } else if (currentView === 'profile') {
+      setCurrentView('search');
+    } else if (hasSearched) {
+      setHasSearched(false);
+      setRecipes([]);
+    }
+  }, [isGameActive, selectedRecipe, currentView, hasSearched, handleBack]);
+
+  const showBack = isGameActive || selectedRecipe !== null || currentView === 'profile' || hasSearched;
 
   const displayedRecipes = useMemo(() => {
     const allRecipes = activeFilter === 'saved' ? Array.from(savedRecipes.values()) : recipes;
     return allRecipes.map(r => ({...r, isSaved: savedRecipes.has(r.recipeName)}));
   }, [recipes, savedRecipes, activeFilter]);
-  
+
   const renderContent = () => {
     if (isGameActive && selectedRecipe) {
-        return <CookingGame recipe={selectedRecipe} onEndGame={() => setIsGameActive(false)} />;
+        return (
+            <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                <CookingGame recipe={selectedRecipe} onEndGame={() => setIsGameActive(false)} />
+            </motion.div>
+        );
     }
 
     if (selectedRecipe) {
-        return <RecipeDetail 
+        return (
+            <motion.div key="detail" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <RecipeDetail 
                     recipe={selectedRecipe} 
                     onBack={handleBack} 
                     onToggleSave={() => toggleSaveRecipe(selectedRecipe)} 
                     onStartGame={() => setIsGameActive(true)}
-                />;
+                />
+            </motion.div>
+        );
     }
 
     if (currentView === 'profile') {
-        return <Profile 
+        return (
+            <motion.div key="profile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Profile 
                     savedRecipes={Array.from(savedRecipes.values())} 
                     onSelectRecipe={handleSelectRecipe}
                     onToggleSave={toggleSaveRecipe}
                     onBack={() => setCurrentView('search')}
-                />;
+                />
+            </motion.div>
+        );
     }
 
     // Default to search view
     return (
-        <>
+        <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <Hero />
             <SearchBar onSearch={handleSearch} isLoading={isLoading} />
             <SearchHistory history={searchHistory} onSearch={handleHistorySearch} onClear={clearSearchHistory} />
@@ -185,19 +222,26 @@ const App: React.FC = () => {
                   recipe={recipe} 
                   onSelect={() => handleSelectRecipe(recipe)}
                   onToggleSave={() => toggleSaveRecipe(recipe)}
-                  style={{ animationDelay: `${index * 100}ms` }}
+                  index={index}
                 />
               ))}
             </div>
-        </>
+        </motion.div>
     );
   };
 
   return (
     <div className="min-h-screen font-sans text-gray-800">
-      <Header onShowProfile={() => { setSelectedRecipe(null); setIsGameActive(false); setCurrentView('profile'); }} />
+      <Header 
+        onShowProfile={() => { setSelectedRecipe(null); setIsGameActive(false); setCurrentView('profile'); }} 
+        onGoHome={handleGoHome}
+        onBack={handleGlobalBack}
+        showBack={showBack}
+      />
       <main className="container mx-auto p-4 md:p-8">
-        {renderContent()}
+        <AnimatePresence mode="wait">
+            {renderContent()}
+        </AnimatePresence>
       </main>
     </div>
   );
